@@ -1,9 +1,11 @@
 import discord
+from discord.ext import commands 
 import os
 import requests
 import json
-
-client = discord.Client()
+import aiohttp
+my_secret = os.environ['TOKEN']
+client = commands.Bot(command_prefix="!")
 
 def get_quote():
   response = requests.get("https://zenquotes.io/api/random")
@@ -23,5 +25,27 @@ async def on_message(message):
   if message.content.startswith('$inspire'):
     quote = get_quote()
     await message.channel.send(quote)
+@client.command()
+async def meme(ctx):
+  async with aiohttp.ClientSession() as cs:
+    async with cs.get("https://www.reddit.com/r/memes/hot.json") as r:
+      memes = await r.json()
+      embed = discord.Embed (
+        color = discord.Color.purple()
+      )
+      embed.set_image(url=memes["data"]["children"][random.randint(0,25)]["data"]["url"])
+      embed.set_footer(text=f"Powered by r/memes and requested by {ctx.author}") 
+@client.event
+async def on_message(message):
+    if message.content.startswith('$greet'):
+        channel = message.channel
+        await channel.send('Say hello!')
 
-client.run(os.getenv('TOKEN'))
+        def check(m):
+            return m.content == 'hello' and m.channel == channel
+
+        msg = await client.wait_for('message', check=check)
+        await channel.send('Hello {.author}!'.format(msg))
+
+client.run(my_secret)
+
